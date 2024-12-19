@@ -1,0 +1,196 @@
+#include "Wire.h"
+#include "VL6180X.h"
+
+// Initialize the VL6180X sensor
+VL6180X sensor;
+float initialDistance = 0; 
+float newDistance = 0; 
+float changeInDistance1 = 0;
+float changeInDistance = 0;
+const float GravitationalAcceleration = 9.8; // Gravitational acceleration constant
+float SpringConstant = 0;
+int x = 0;
+float Force = 0;
+float Mass1 = 0;
+int y = 0;
+
+// Function to measure the average distance over a given duration in milliseconds
+float measureAverageDistance(int durationMs) { 
+  const int sets = 5; // Define a constant integer for the number of measurement sets
+  float totalAverage = 0; // Variable to hold the total average distance
+  
+  for (int i = 0; i < sets; i++) { // Loop through each measurement set
+    int measureCount = 0; // Counter for the number of measurements in the current set
+    float totalDistance = 0; // Variable to hold the total distance for the current set
+    unsigned long startTime = millis(); // Record the start time
+    
+    while (millis() - startTime < durationMs) { // Measure distance for the specified duration
+      totalDistance += sensor.readRangeSingleMillimeters(); // Add the current distance reading
+      measureCount++;
+      delay(50); // Small delay between measurements
+    }
+    
+    float averageDistance = totalDistance / measureCount; // Calculate the average distance for the current set
+    totalAverage += averageDistance; // Add the current average to the total average
+    delay(100);  // Small delay between sets
+  }
+  
+  float finalAverage = totalAverage / sets; // Calculate the final average distance
+  return finalAverage; // Return the final average distance
+}
+
+// Function to calculate force based on input mass
+float calculateForce() {
+  float ObjectMass = 0;
+  while (Serial.available() == 0) {} // Wait for user input
+  ObjectMass = Serial.parseFloat(); // Parse the input as float
+  float Mass = ObjectMass;  // Use the input mass
+  float Force = GravitationalAcceleration * Mass; // Calculate force using F = m * g
+  return Force;
+}
+
+// Function to calculate mass based on spring constant and change in distance
+float calculateMass() {
+  float SpringConstant = 0;
+  while (Serial.available() == 0) {} // Wait for user input
+  SpringConstant = Serial.parseFloat(); // Parse the input as float
+  float Force1 = (SpringConstant * changeInDistance) / 1000; // Calculate force using F = k * x
+  float Mass1 = Force1 / GravitationalAcceleration; // Calculate mass using m = F / g
+  return Mass1;
+}
+
+// Function to count down from 5
+void countdown(){
+  Serial.print("5");
+  delay(1000);
+  Serial.print("4");
+  delay(1000);
+  Serial.print("3");
+  delay(1000);
+  Serial.print("2");
+  delay(1000);
+  Serial.print("1\n");
+  delay(1000);
+}
+
+// Function to count down from 20
+void countdown2(){
+  Serial.print("20");
+  delay(1000);
+  Serial.print("19");
+  delay(1000);
+  Serial.print("18");
+  delay(1000);
+  Serial.print("17");
+  delay(1000);
+  Serial.print("16");
+  delay(1000);
+  Serial.print("15");
+  delay(1000);
+  Serial.print("14");
+  delay(1000);
+  Serial.print("13");
+  delay(1000);
+  Serial.print("12");
+  delay(1000);
+  Serial.print("11");
+  delay(1000);
+  Serial.print("10");
+  delay(1000);
+  Serial.print("9");
+  delay(1000);
+  Serial.print("8");
+  delay(1000);
+  Serial.print("7");
+  delay(1000);
+  Serial.print("6");
+  delay(1000);
+  Serial.print("5");
+  delay(1000);
+  Serial.print("4");
+  delay(1000);
+  Serial.print("3");
+  delay(1000);
+  Serial.print("2");
+  delay(1000);
+  Serial.print("1\n");
+  delay(1000);
+}
+
+void setup() {
+  Serial.begin(115200); // Initialize serial communication at 115200 baud
+  while (!Serial) {
+    ; // Wait for serial to become available
+  }
+  Wire.begin();  // Initialize I2C communication
+  sensor.init(); // Initialize the sensor
+  sensor.configureDefault(); // Configure the sensor with default settings
+  sensor.setTimeout(500); // Set timeout for sensor readings
+  delay(2000); // Delay to allow the sensor to initialize
+}
+
+void loop() {
+  delay(1000);
+  Serial.println("Measuring the initial distance in...");
+  countdown(); // Countdown before starting measurement
+  initialDistance = measureAverageDistance(7500); // Measure initial distance
+  delay(2000); 
+  Serial.println("Measuring new distance in...");
+  countdown2(); // Countdown before measuring new distance
+  Serial.println("one more time");
+  countdown(); // Countdown before measuring new distance again
+  newDistance = measureAverageDistance(7500); // Measure new distance
+  Serial.println("Setup complete.");
+  delay(5000);
+  changeInDistance = initialDistance - newDistance; // Calculate change in distance
+  Serial.println("Initial Distance: "); Serial.print(initialDistance); Serial.println(" mm");
+  Serial.println("New Distance: "); Serial.print(newDistance); Serial.println(" mm");
+  Serial.println("Change in Distance: "); Serial.print(changeInDistance); Serial.println(" mm");
+  Serial.println("Please remove the object");
+  
+  Serial.println("Choose 1 if you want to calculate spring constant, Choose 2 if you want to calculate mass"); 
+  while (Serial.available() == 0) {} // Wait for user input
+  x = Serial.parseInt(); // Parse the input as integer
+  Serial.print("You entered: "); Serial.println(x);
+  if (x == 1 ){
+    Serial.println("Enter mass in kg: ");
+    calculateForce(); // Calculate force based on mass input
+    Force = calculateForce(); // Retrieve calculated force
+    SpringConstant = (Force / changeInDistance) * 1000; // Calculate spring constant
+    Serial.print("Change in Distance: "); Serial.print(changeInDistance); Serial.println(" mm");
+    Serial.print("Force: "); Serial.print(Force); Serial.println(" N");
+    Serial.print("Spring Constant: "); Serial.print(SpringConstant); Serial.println(" N/m");
+  } else if (x == 2) {
+    Serial.println("Enter Spring Constant in N/m: ");
+    calculateMass(); // Calculate mass based on spring constant input
+    Mass1 = calculateMass(); // Retrieve calculated mass
+    float CountedMass2 = Mass1;
+    Serial.print("Calculated Mass: "); Serial.print(Mass1); Serial.println(" KG");
+  } else {
+    Serial.println("Invalid option. Please choose 1 or 2.");
+  }
+  countdown(); // Countdown before restarting or stopping
+  //For restarting the run or turn off the device
+  Serial.println("Do you want to use a new distance or to stop? Enter 1 to continue, Enter 2 to stop");
+  while (Serial.available() > 0){
+    Serial.read(); // Clear the input buffer
+  }
+  while (Serial.available() == 0) {
+    delay(50); // Wait for user input
+  }
+  y = Serial.parseInt(); // Parse the input as integer
+  if (y == 1) {
+    delay(1000);
+    Serial.println("Prepare to enter new mass");
+  } else if (y == 2){
+    Serial.println("Thank you for using this device, please unplug the power to turn it off.");
+    delay(1000);
+    esp_deep_sleep_start(); // Put the device to deep sleep
+  }
+  while (Serial.available() > 0){
+    Serial.read(); // Clear the input buffer
+  }
+  Serial.println("Please wait 5 seconds so that it stops moving\n");
+  countdown(); // Countdown before restarting measurement
+  delay(2000);
+}
